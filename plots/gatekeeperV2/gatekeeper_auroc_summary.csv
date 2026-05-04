@@ -1,0 +1,4 @@
+Method,lostandfound,streethazards,smiyc,nearood,farood
+Benford only,45.03,72.6,73.9,45.03,72.84
+Baseline MAHALANOBIS,94.35,99.04,99.73,94.35,99.17
+Hybrid Benford+MAHALANOBIS,90.7,94.98,95.07,90.7,94.99

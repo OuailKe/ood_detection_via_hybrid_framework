@@ -1,0 +1,36 @@
+dataset:
+  name: bdd100k
+  num_classes: 13
+  pre_size: 256
+  image_size: 224
+
+  interpolation: bilinear
+  normalization_type: imagenet
+
+  num_workers: '@{num_workers}'
+  num_gpus: '@{num_gpus}'
+  num_machines: '@{num_machines}'
+
+  split_names: [train, val, test]
+
+  train:
+    dataset_class: ImglistDataset
+    data_dir: ../data/id/bdd100k/bdd100k/bdd100k/images/
+    imglist_pth: ../data/benchmark_imglist/autonomous/bdd100k/train_13cls.txt
+    batch_size: 64
+    shuffle: True
+    maxlen: 5000
+  val:
+    dataset_class: ImglistDataset
+    data_dir: ../data/id/bdd100k/bdd100k/bdd100k/images/
+    imglist_pth: ../data/benchmark_imglist/autonomous/bdd100k/val_13cls.txt
+    batch_size: 64
+    shuffle: False
+    maxlen: 1000
+  test:
+    dataset_class: ImglistDataset
+    data_dir: ../data/id/bdd100k/bdd100k/bdd100k/images/
+    imglist_pth: ../data/benchmark_imglist/autonomous/bdd100k/test_13cls.txt
+    batch_size: 64
+    shuffle: False
+    maxlen: 1000

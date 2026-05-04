@@ -1,0 +1,12 @@
+Mahalanobis OOD Evaluation
+============================================================
+Model    : /home/ouail.kerrak/ood_project/results/bdd100k_vit-b-16_base_e30_lr0.001_bdd100k_13cls_ft/s0/best.ckpt
+Threshold: BDD100K-val at 95% TPR
+Note     : ACC column is 0.0 — fill from training log
+
+      dataset  FPR@95  AUROC  AUPR_IN  AUPR_OUT  ACC
+ lostandfound   36.58  94.35    99.29     65.27  0.0
+streethazards    2.80  99.04    99.86     92.31  0.0
+        smiyc    0.58  99.73    99.99     94.25  0.0
+      nearood   36.58  94.35    99.29     65.27  0.0
+       farood    2.39  99.17    99.85     94.84  0.0

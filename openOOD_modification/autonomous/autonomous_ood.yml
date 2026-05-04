@@ -1,0 +1,33 @@
+ood_dataset:
+  name: autonomous_ood
+  num_classes: 1
+  normalization_type: imagenet    # ← add this
+  dataset_class: ImglistDataset
+  interpolation: bilinear
+  batch_size: 32
+  shuffle: False
+  pre_size: 256
+  image_size: 224
+  num_workers: '@{num_workers}'
+  num_gpus: '@{num_gpus}'
+  num_machines: '@{num_machines}'
+  split_names: [val, nearood, farood]
+
+  val:
+    data_dir: ../data/ood/far/SMIYC/test/images/
+    imglist_pth: ../data/benchmark_imglist/autonomous/smiyc/val.txt
+
+  nearood:
+    datasets: [lostandfound]
+    lostandfound:
+      data_dir: ../data/ood/near/LostAndFound/
+      imglist_pth: ../data/benchmark_imglist/autonomous/lostandfound/test.txt
+
+  farood:
+    datasets: [smiyc, streethazards]
+    smiyc:
+      data_dir: ../data/ood/far/SMIYC/test/images/
+      imglist_pth: ../data/benchmark_imglist/autonomous/smiyc/test.txt
+    streethazards:
+      data_dir: ../data/ood/far/StreetHazards/test/images/
+      imglist_pth: ../data/benchmark_imglist/autonomous/streethazards/test.txt

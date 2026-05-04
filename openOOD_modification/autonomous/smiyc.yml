@@ -1,0 +1,33 @@
+dataset:
+  name: smiyc
+  num_classes: 1
+  pre_size: 256
+  image_size: 224
+
+  interpolation: bilinear
+  normalization_type: imagenet
+
+  num_workers: '@{num_workers}'
+  num_gpus: '@{num_gpus}'
+  num_machines: '@{num_machines}'
+
+  split_names: [train, val, test]
+
+  train:
+    dataset_class: ImglistDataset
+    data_dir: d:/Research/ood_project/data/ood/far/SMIYC/train/images/
+    imglist_pth: d:/Research/ood_project/data/benchmark_imglist/autonomous/smiyc/train.txt
+    batch_size: 32
+    shuffle: True
+  val:
+    dataset_class: ImglistDataset
+    data_dir: d:/Research/ood_project/data/ood/far/SMIYC/train/images/
+    imglist_pth: d:/Research/ood_project/data/benchmark_imglist/autonomous/smiyc/val.txt
+    batch_size: 32
+    shuffle: False
+  test:
+    dataset_class: ImglistDataset
+    data_dir: d:/Research/ood_project/data/ood/far/SMIYC/test/images/
+    imglist_pth: d:/Research/ood_project/data/benchmark_imglist/autonomous/smiyc/test.txt
+    batch_size: 32
+    shuffle: False

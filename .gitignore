@@ -1,0 +1,17 @@
+data/
+results/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/
+# Conda environments
+*.egg-info/
+# Logs
+*.log
+logs/
+# Large model files
+*.pth
+*.ckpt
+*.pt# OS
+.DS_Store
