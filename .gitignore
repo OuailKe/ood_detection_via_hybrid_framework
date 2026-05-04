@@ -15,3 +15,4 @@ logs/
 *.ckpt
 *.pt# OS
 .DS_Store
+OpenOOD/
