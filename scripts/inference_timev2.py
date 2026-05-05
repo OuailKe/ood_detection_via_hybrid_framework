@@ -1,23 +1,5 @@
 #!/home/ouail.kerrak/.conda/envs/ood310/bin/python
-"""
-Inference Time Benchmark
-========================
-Measures per-image inference time for each OOD detection approach:
-  1. MSP          — softmax confidence (forward pass only)
-  2. Energy       — logsumexp of logits (forward pass only)
-  3. Mahalanobis  — forward pass + feature extraction + distance computation
-  4. Benford/DCT  — DCT coefficient extraction + χ² test (no GPU needed)
-  5. Hybrid       — Benford + Mahalanobis combined
 
-Reports:
-  - Mean ± std time per image (ms)
-  - Throughput (images/second)
-  - timing_results.csv
-
-Usage:
-  conda activate ood310
-  python timing_benchmark.py
-"""
 
 import os
 import sys
@@ -29,7 +11,6 @@ from tqdm import tqdm
 from PIL import Image
 from scipy.fftpack import dct
 
-# ── Environment guard ─────────────────────────────────────────────────────────
 _env = os.environ.get('CONDA_DEFAULT_ENV', '')
 if _env != 'ood310':
     print(f'ERROR: wrong environment "{_env}". '
@@ -44,7 +25,6 @@ import torchvision.models as tv_models
 from torchvision import transforms
 from sklearn.covariance import EmpiricalCovariance
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path('/home/ouail.kerrak/ood_project')
 DATA_DIR     = PROJECT_ROOT / 'data'
 RESULTS_DIR  = PROJECT_ROOT / 'results'
@@ -54,8 +34,8 @@ OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 MODEL_CKPT   = RESULTS_DIR / \
     'bdd100k_vit-b-16_base_e30_lr0.001_bdd100k_13cls_ft/s0/best.ckpt'
 NUM_CLASSES  = 13
-N_WARMUP     = 50    # warmup iterations (not measured)
-N_MEASURE    = 200   # measured iterations per method
+N_WARMUP     = 50    
+N_MEASURE    = 200   
 
 IMGLIST = DATA_DIR / 'benchmark_imglist/autonomous/bdd100k/val_13cls.txt'
 IMG_DIR = DATA_DIR / 'id/bdd100k/bdd100k/bdd100k/images/'
@@ -67,7 +47,6 @@ TRANSFORM = transforms.Compose([
                          std=[0.229, 0.224, 0.225]),
 ])
 
-# ── Benford helpers ───────────────────────────────────────────────────────────
 BENFORD_PROBS = np.array([np.log10(1 + 1/d) for d in range(1, 10)])
 
 def get_first_digit(x):
@@ -79,7 +58,7 @@ def get_first_digit(x):
     return int(x)
 
 def compute_dct_benford_chi2(img_array):
-    """Takes a (224,224) grayscale numpy array, returns χ² statistic."""
+
     arr       = img_array.astype(np.float64)
     block_size = 8
     h, w      = arr.shape
@@ -103,9 +82,6 @@ def compute_dct_benford_chi2(img_array):
     return float(chi2_stat)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# SETUP
-# ══════════════════════════════════════════════════════════════════════════════
 
 def load_model():
     model = tv_models.vit_b_16(weights=None)
@@ -119,7 +95,7 @@ def load_model():
 
 
 def load_sample_images(n=N_WARMUP + N_MEASURE):
-    """Load n image paths from BDD100K val imglist."""
+   
     images = []
     with open(IMGLIST) as f:
         for line in f:
@@ -132,7 +108,6 @@ def load_sample_images(n=N_WARMUP + N_MEASURE):
 
 
 def preload_tensors(image_paths):
-    """Pre-load all images as tensors and grayscale arrays to isolate pure inference time."""
     tensors  = []
     grays    = []
     for p in tqdm(image_paths, desc='  Preloading images', leave=False):
@@ -146,7 +121,7 @@ def preload_tensors(image_paths):
 
 
 def fit_mahalanobis(model, image_paths, tensors):
-    """Fit class-conditional Gaussians on first N images."""
+   
     print('  Fitting Mahalanobis on 500 ID samples...')
     features_store = []
 
@@ -189,10 +164,6 @@ def fit_mahalanobis(model, image_paths, tensors):
 
     return class_means, precision, hook
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# TIMING FUNCTIONS — each measures ONE image at a time
-# ══════════════════════════════════════════════════════════════════════════════
 
 def time_msp_energy(model, tensors, n_warmup, n_measure):
     """Time MSP and Energy together — same forward pass."""
@@ -240,7 +211,6 @@ def time_mahalanobis(model, tensors, class_means, precision,
 
     hook = model.heads.head.register_forward_pre_hook(hook_fn)
 
-    # Warmup
     with torch.no_grad():
         for t in tensors[:n_warmup]:
             features_store.clear()
@@ -256,7 +226,6 @@ def time_mahalanobis(model, tensors, class_means, precision,
             _ = model(t)
             feat = features_store[0]                    # [1, 768]
 
-            # Distance to all class means
             dists = []
             for mean in class_means:
                 diff = feat[0] - mean
@@ -288,13 +257,7 @@ def time_benford(grays, n_warmup, n_measure):
 
 def time_hybrid(model, tensors, grays, class_means, precision,
                 tau_benford, n_warmup, n_measure):
-    """
-    Time full early-exit hybrid pipeline per image:
-      Stage 1: Benford χ² check (CPU)
-        → if χ² > τ_benford: REJECT immediately, skip GPU forward pass
-        → if χ² ≤ τ_benford: proceed to Stage 2
-      Stage 2: Mahalanobis distance check (GPU forward pass + distance)
-    """
+   
     features_store = []
 
     def hook_fn(module, input):
@@ -311,8 +274,8 @@ def time_hybrid(model, tensors, grays, class_means, precision,
                 _ = model(t)
 
     times          = []
-    stage1_only    = 0   # count of early exits (no GPU call)
-    stage1_and_2   = 0   # count of full pipeline runs
+    stage1_only    = 0   
+    stage1_and_2   = 0   
 
     with torch.no_grad():
         for t, g in zip(tensors[n_warmup:n_warmup + n_measure],
@@ -321,14 +284,11 @@ def time_hybrid(model, tensors, grays, class_means, precision,
             torch.cuda.synchronize()
             t0   = time.perf_counter()
 
-            # Stage 1 — Benford filter (CPU only)
             chi2 = compute_dct_benford_chi2(g)
 
             if chi2 > tau_benford:
-                # Early exit — skip GPU forward pass entirely
                 stage1_only += 1
             else:
-                # Stage 2 — Mahalanobis (GPU forward pass + distance)
                 features_store.clear()
                 _ = model(t)
                 feat  = features_store[0][0]
@@ -350,10 +310,6 @@ def time_hybrid(model, tensors, grays, class_means, precision,
     return times
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# MAIN
-# ══════════════════════════════════════════════════════════════════════════════
-
 def summarise(times, name):
     arr = np.array(times)
     return {
@@ -373,7 +329,6 @@ def main():
     print(f'  Warmup iterations:  {N_WARMUP}')
     print(f'  Measured iterations: {N_MEASURE}')
 
-    # ── Setup ─────────────────────────────────────────────────────────────────
     print('\n[1/4] Loading model...')
     model = load_model()
     print('  ✓ Model loaded')
@@ -385,12 +340,10 @@ def main():
 
     print('\n[3/4] Fitting Mahalanobis...')
     class_means, precision, _ = fit_mahalanobis(model, image_paths, tensors)
-    # Calibrate thresholds on warmup set
-    tau_benford     = 73.3     # from diagnostic output
-    tau_mahalanobis = 1204.01  # from mahalanobis_eval output
+    tau_benford     = 73.3     
+    tau_mahalanobis = 1204.01  
     print('  ✓ Mahalanobis fitted')
 
-    # ── Run timings ───────────────────────────────────────────────────────────
     print('\n[4/4] Timing methods...')
     results = []
 
@@ -417,7 +370,6 @@ def main():
         N_WARMUP, N_MEASURE)
     results.append(summarise(hybrid_times, 'Hybrid (early-exit Benford+Mahalanobis)'))
 
-    # ── Print and save ────────────────────────────────────────────────────────
     df = pd.DataFrame(results)
 
     print('\n' + '=' * 60)

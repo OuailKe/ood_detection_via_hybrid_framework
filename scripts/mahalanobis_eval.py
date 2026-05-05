@@ -7,7 +7,6 @@ import pandas as pd
 from pathlib import Path
 from tqdm import tqdm
 
-# ── Environment guard ────────────────────────────────────────────────────────
 import sys
 _expected_env = 'ood310'
 _current_env  = os.environ.get('CONDA_DEFAULT_ENV', '')
@@ -16,7 +15,6 @@ if _current_env != _expected_env:
           f'Run with: conda activate {_expected_env} && python {sys.argv[0]}')
     sys.exit(1)
 
-# ── GPU selection ─────────────────────────────────────────────────────────────
 os.environ['CUDA_VISIBLE_DEVICES'] = os.environ.get('GPU_ID', '0')
 
 import torch
@@ -27,7 +25,6 @@ from PIL import Image
 from sklearn.covariance import EmpiricalCovariance
 from sklearn.metrics import roc_auc_score, average_precision_score
 
-# ── Paths ─────────────────────────────────────────────────────────────────────
 PROJECT_ROOT = Path('/home/ouail.kerrak/ood_project')
 RESULTS_DIR  = PROJECT_ROOT / 'results'
 DATA_DIR     = PROJECT_ROOT / 'data'
@@ -38,7 +35,6 @@ MODEL_CKPT = RESULTS_DIR / 'bdd100k_vit-b-16_base_e30_lr0.001_bdd100k_13cls_ft/s
 NUM_CLASSES = 13
 BATCH_SIZE  = 32
 
-# ── Dataset registry ──────────────────────────────────────────────────────────
 DATASETS = {
     'bdd100k_val': {
         'imglist':   DATA_DIR / 'benchmark_imglist/autonomous/bdd100k/val_13cls.txt',
@@ -66,7 +62,7 @@ DATASETS = {
     },
 }
 
-# ── Image transform (must match training) ─────────────────────────────────────
+# Image transform (must match training) 
 TRANSFORM = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.ToTensor(),
@@ -75,7 +71,7 @@ TRANSFORM = transforms.Compose([
 ])
 
 
-# ── Dataset class ─────────────────────────────────────────────────────────────
+# Dataset class 
 class ImgListDataset(Dataset):
     def __init__(self, image_paths, image_dir, transform=None):
         self.image_paths = image_paths
@@ -95,7 +91,6 @@ class ImgListDataset(Dataset):
         return image, label, str(img_path)
 
 
-# ── Imglist loader ─────────────────────────────────────────────────────────────
 def load_imglist(path):
     images, labels = [], []
     with open(path, 'r') as f:
@@ -105,9 +100,7 @@ def load_imglist(path):
                 images.append(parts[0])
                 labels.append(int(parts[1]))
     return images, labels
-
-
-# ── Feature extractor ─────────────────────────────────────────────────────────
+ 
 def extract_features(model, image_paths, image_dir, batch_size=BATCH_SIZE):
     """
     Extract 768-dim penultimate features from torchvision ViT-B/16.
@@ -144,8 +137,7 @@ def extract_features(model, image_paths, image_dir, batch_size=BATCH_SIZE):
     hook.remove()
     return torch.cat(all_features, dim=0).numpy()   # [N, 768]
 
-
-# ── Mahalanobis scorer ────────────────────────────────────────────────────────
+#  Mahalanobis scorer 
 def fit_mahalanobis(train_features, train_labels, num_classes=NUM_CLASSES):
     """
     Fit class-conditional Gaussians on training features.
@@ -167,11 +159,7 @@ def fit_mahalanobis(train_features, train_labels, num_classes=NUM_CLASSES):
 
 
 def score_mahalanobis(features, class_means, precision, chunk_size=500):
-    """
-    Compute per-sample minimum Mahalanobis distance to any class centroid.
-    Lower score = more ID-like.
-    Uses vectorised einsum — avoids the [B,B] cross-product bug in OpenOOD.
-    """
+   
     scores = []
     for start in tqdm(range(0, len(features), chunk_size),
                       desc='  Scoring', leave=False):
@@ -187,17 +175,9 @@ def score_mahalanobis(features, class_means, precision, chunk_size=500):
     return np.concatenate(scores)                       # [N]
 
 
-# ── Metrics ───────────────────────────────────────────────────────────────────
+# Metrics 
 def compute_metrics(id_scores, ood_scores, tpr_level=0.95):
-    """
-    Compute FPR@95, AUROC, AUPR_IN, AUPR_OUT.
-
-    Mahalanobis convention:
-      lower distance = more ID-like
-      higher distance = more OOD-like
-
-    So we use scores as-is: high score → OOD → label=1.
-    """
+    
     labels = np.concatenate([np.zeros(len(id_scores)),
                               np.ones(len(ood_scores))])
     scores = np.concatenate([id_scores, ood_scores])
@@ -211,9 +191,7 @@ def compute_metrics(id_scores, ood_scores, tpr_level=0.95):
     # AUPR_IN: ID as positive class → negate scores so lower distance = higher ID score
     aupr_in  = average_precision_score(1 - labels, -scores)
 
-    # FPR@95: threshold = 95th percentile of ID scores
-    # 95% of ID samples fall BELOW this threshold (accepted as ID)
-    # FPR = fraction of OOD samples also below this threshold (missed)
+    
     thresh = np.percentile(id_scores, tpr_level * 100)   # e.g. 95th percentile
     fpr    = (ood_scores <= thresh).mean()
 
@@ -224,16 +202,11 @@ def compute_metrics(id_scores, ood_scores, tpr_level=0.95):
         'AUPR_OUT': round(aupr_out * 100, 2),
     }
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# MAIN
-# ══════════════════════════════════════════════════════════════════════════════
 def main():
     print('=' * 60)
     print('  Mahalanobis OOD Evaluation')
     print('=' * 60)
 
-    # ── Load model ────────────────────────────────────────────────────────────
     print('\n[1/4] Loading model...')
     model = tv_models.vit_b_16(weights=None)
     model.heads.head = torch.nn.Linear(model.heads.head.in_features, NUM_CLASSES)
@@ -243,7 +216,6 @@ def main():
     model.eval()
     print(f'  ✓ Loaded from {MODEL_CKPT}')
 
-    # ── Load all imglists ─────────────────────────────────────────────────────
     print('\n[2/5] Loading image lists...')
     dataset_index = {}
     for name, cfg in DATASETS.items():
@@ -257,7 +229,6 @@ def main():
         }
         print(f'  {name:20s}: {len(images):5d} images')
 
-    # ── Compute ID accuracy ───────────────────────────────────────────────────
     print('\n[2.5/5] Computing ID accuracy...')
     id_dataset = ImgListDataset(
         dataset_index['bdd100k_val']['images'],
@@ -287,7 +258,7 @@ def main():
     id_acc = correct / total * 100
     print(f'  ✓ ID accuracy: {id_acc:.2f}%')
 
-    # ── Extract training features and fit Gaussians ───────────────────────────
+    # Extract training features and fit Gaussians 
     print('\n[3/5] Fitting Mahalanobis on BDD100K-val (ID)...')
     train_features = extract_features(
         model,
@@ -300,7 +271,6 @@ def main():
     class_means, precision = fit_mahalanobis(train_features, train_labels)
     print(f'  ✓ Precision matrix:  {precision.shape}')
 
-    # ── Score all datasets ────────────────────────────────────────────────────
     print('\n[4/5] Scoring all datasets...')
     all_scores = {}
     for name, cfg in dataset_index.items():
@@ -311,13 +281,13 @@ def main():
         print(f'    mean distance: {scores.mean():.2f}  '
               f'min: {scores.min():.2f}  max: {scores.max():.2f}')
 
-    # Sanity check
+   
     print('\n  Sanity check (OOD should be > ID):')
     for name, scores in all_scores.items():
         tag = '← ID (reference)' if name == 'bdd100k_val' else ''
         print(f'    {name:20s}: {scores.mean():.2f}  {tag}')
 
-    # ── Save .npz score files (one per dataset, OpenOOD format) ─────────────
+    # Save .npz score files (one per dataset, OpenOOD format) 
     # OpenOOD stores conf (confidence) and pred (predicted class) in each .npz
     # For Mahalanobis: conf = -distance (higher = more ID-like, matches OpenOOD sign)
     scores_dir = OUTPUT_DIR / 'scores'
@@ -325,19 +295,16 @@ def main():
 
     print('\n  Saving .npz score files...')
     for name, cfg in dataset_index.items():
-        # OpenOOD convention: higher conf = more ID-like
-        # Mahalanobis distance: lower = more ID → negate so higher = more ID
+       
         conf = -all_scores[name].astype(np.float32)
 
-        # Dummy pred — predicted class index (not critical for OOD metrics)
-        # We don't have logits here so fill with zeros
+      
         pred = np.zeros(len(conf), dtype=np.int64)
 
         npz_path = scores_dir / f'{name}.npz'
         np.savez(npz_path, conf=conf, pred=pred)
         print(f'    ✓ {npz_path.name}  ({len(conf)} samples)')
 
-    # ── Compute metrics ───────────────────────────────────────────────────────
     id_scores = all_scores['bdd100k_val']
     results   = []
 
@@ -357,8 +324,7 @@ def main():
     for group_name, dataset_names in ood_groups.items():
         ood_sc = np.concatenate([all_scores[n] for n in dataset_names])
         m = compute_metrics(id_scores, ood_sc)
-        # ACC = classification accuracy on ID samples (same for all OOD rows,
-        # OpenOOD reports the ID test accuracy here — we don't have it so use 0.0)
+       
         results.append({
             'dataset':  group_name,
             'FPR@95':   m['FPR@95'],
@@ -372,12 +338,10 @@ def main():
 
     print('=' * 60)
 
-    # ── Save ood.csv (matches OpenOOD format exactly) ─────────────────────────
     results_df = pd.DataFrame(results)
     ood_csv    = OUTPUT_DIR / 'ood.csv'
     results_df.to_csv(ood_csv, index=False)
 
-    # ── Save human-readable log ───────────────────────────────────────────────
     log_txt = OUTPUT_DIR / 'log.txt'
     with open(log_txt, 'w') as f:
         f.write('Mahalanobis OOD Evaluation\n')

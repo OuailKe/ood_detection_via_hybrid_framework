@@ -1,45 +1,5 @@
 #!/home/ouail.kerrak/.conda/envs/ood310/bin/python
-"""
-Hybrid Statistical-Semantic Gatekeeper
-=======================================
-Implements the two-stage OOD detection pipeline from the research proposal:
 
-  Stage 1 — Benford/DCT statistical filter
-    Computes χ² goodness-of-fit between the first-digit distribution of
-    DCT AC coefficients and Benford's Law. Natural images conform closely
-    to Benford's Law; sensor anomalies (glare, noise, blur) and OOD scenes
-    deviate significantly.
-
-  Stage 2 — Semantic filter (Energy, MSP, Mahalanobis)
-    Standard post-hoc OOD scores from the ViT-B/16 feature space.
-
-  Decision (from proposal Equation 1):
-    REJECT if χ²_stat > τ_benford   (statistical anomaly)
-    REJECT if semantic_score > τ_semantic  (semantic anomaly)
-    ACCEPT otherwise
-
-Outputs (OpenOOD-compatible format):
-  results/
-  ├── baseline/          ← semantic-only (Energy, MSP, Mahalanobis)
-  │   └── ood.csv
-  ├── benford_only/      ← Benford gate alone
-  │   └── ood.csv
-  ├── hybrid_energy/     ← Benford + Energy
-  │   └── ood.csv
-  ├── hybrid_msp/        ← Benford + MSP
-  │   └── ood.csv
-  ├── hybrid_mahalanobis/← Benford + Mahalanobis  (main contribution)
-  │   └── ood.csv
-  ├── chi2_scores.csv    ← per-sample Benford χ² statistics
-  └── gatekeeper_summary.csv  ← all methods side by side
-
-Usage:
-  conda activate ood310
-  python hybrid_gatekeeper.py
-
-  # Override paths via environment variables:
-  SCORES_DIR=/path/to/npz  python hybrid_gatekeeper.py
-"""
 
 import os
 import sys
@@ -68,21 +28,19 @@ DATA_DIR     = PROJECT_ROOT / 'data'
 OUTPUT_DIR   = PROJECT_ROOT / 'plots' / 'gatekeeperV2'
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Where the existing semantic score .npz files live
-# Energy/MSP:       plots/msp/   or from OpenOOD results
-# Mahalanobis:      plots/mahalanobis/scores/
+# Where the existing semantic score .npz files 
+
 MSP_SCORES_DIR   = PROJECT_ROOT / 'results' / \
     'bdd100k_vit-b-16_base_e30_lr0.001_bdd100k_13cls_ft_ood_ood_msp_bdd100k_13cls_ft' / 'scores'
 MAHA_SCORES_DIR  = PROJECT_ROOT / 'plots' / 'mahalanobis' / 'scores'
 
-# Dataset image directories
 DATASETS = {
     'bdd100k_val': {
         'imglist':   DATA_DIR / 'benchmark_imglist/autonomous/bdd100k/val_13cls.txt',
         'image_dir': DATA_DIR / 'id/bdd100k/bdd100k/bdd100k/images/',
         'is_ood':    False,
         'ood_type':  'ID',
-        'npz_stem':  'bdd100k',   # stem used in OpenOOD .npz filename
+        'npz_stem':  'bdd100k',   #  used in OpenOOD .npz filename
     },
     'lostandfound': {
         'imglist':   DATA_DIR / 'benchmark_imglist/autonomous/lostandfound/test.txt',
@@ -115,22 +73,21 @@ OOD_GROUPS = {
     'farood':        ['streethazards', 'smiyc'],
 }
 
-# Benford's Law expected probability for first digits 1–9
 BENFORD_PROBS = np.array([
     np.log10(1 + 1/d) for d in range(1, 10)
-])  # sums to 1.0
+])  
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# STAGE 1 — BENFORD / DCT STATISTICAL FILTER
-# ══════════════════════════════════════════════════════════════════════════════
+
+# STAGE 1 — BENFORD/DCT  FILTER
+
 
 def get_first_digit(x):
     """Return first significant digit (1-9) of absolute value."""
     x = abs(float(x))
     if x == 0:
         return None
-    # Shift to range [1, 10)
+    
     while x < 1:
         x *= 10
     while x >= 10:
@@ -140,18 +97,12 @@ def get_first_digit(x):
 
 def compute_dct_benford_chi2(img_path, block_size=8):
     """
-    Compute Benford's Law χ² statistic for an image using DCT coefficients.
-
-    Pipeline:
       1. Convert to grayscale
       2. Divide into non-overlapping 8×8 blocks
       3. Apply 2D DCT to each block
       4. Collect all AC coefficients (exclude DC = position [0,0])
       5. Extract first significant digit of each non-zero coefficient
       6. Compare digit frequency distribution to Benford's Law via χ²
-
-    Returns:
-      chi2_stat (float): higher = more deviation from Benford = more anomalous
     """
     try:
         img = Image.open(img_path).convert('L')  # grayscale
@@ -175,7 +126,7 @@ def compute_dct_benford_chi2(img_path, block_size=8):
                         digits.append(d)
 
         if len(digits) < 100:
-            # Too few coefficients — return neutral score
+            # Too few coef
             return 0.0
 
         # Observed digit frequencies
@@ -197,10 +148,7 @@ def compute_dct_benford_chi2(img_path, block_size=8):
 
 
 def compute_benford_scores(image_paths, image_dir, desc=''):
-    """
-    Compute Benford χ² scores for all images in a dataset.
-    Returns np.array of shape [N] — higher = more anomalous.
-    """
+    
     scores = []
     image_dir = Path(image_dir)
     for img_path in tqdm(image_paths, desc=f'  Benford [{desc}]', leave=False):
@@ -210,9 +158,8 @@ def compute_benford_scores(image_paths, image_dir, desc=''):
     return np.array(scores)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# IMGLIST LOADER
-# ══════════════════════════════════════════════════════════════════════════════
+
+
 
 def load_imglist(path):
     images, labels = [], []
@@ -225,16 +172,10 @@ def load_imglist(path):
     return images, labels
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # LOAD EXISTING SEMANTIC SCORES FROM .NPZ FILES
-# ══════════════════════════════════════════════════════════════════════════════
 
 def load_semantic_scores(scores_dir, stem):
-    """
-    Load conf scores from an OpenOOD-format .npz file.
-    Tries both {stem}.npz and bdd100k.npz for the ID set.
-    Returns conf array (higher = more ID-like for all methods).
-    """
+    
     path = Path(scores_dir) / f'{stem}.npz'
     if not path.exists():
         raise FileNotFoundError(f'Score file not found: {path}')
@@ -242,9 +183,7 @@ def load_semantic_scores(scores_dir, stem):
     return data['conf']   # shape [N]
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # METRICS
-# ══════════════════════════════════════════════════════════════════════════════
 
 def compute_metrics(id_conf, ood_conf, tpr_level=0.95):
     """
@@ -265,9 +204,8 @@ def compute_metrics(id_conf, ood_conf, tpr_level=0.95):
     aupr_in  = average_precision_score(1 - labels, -scores)
 
     # FPR@95: threshold = 5th percentile of ID scores (after negation)
-    # i.e. 95th percentile of ID conf (before negation)
-    thresh = np.percentile(id_conf, (1 - tpr_level) * 100)   # 5th pct of conf
-    fpr    = (ood_conf <= thresh).mean()                       # OOD below thresh = missed
+    thresh = np.percentile(id_conf, (1 - tpr_level) * 100)   
+    fpr    = (ood_conf <= thresh).mean()                      
 
     return {
         'FPR@95':   round(fpr * 100, 2),
@@ -281,7 +219,6 @@ def compute_metrics_from_scores_and_labels(id_scores, ood_scores,
                                            tpr_level=0.95,
                                            higher_is_ood=True):
     """
-    Generalised metric computation.
     higher_is_ood=True  → use scores directly (Benford χ², Mahalanobis distance)
     higher_is_ood=False → negate first (MSP, Energy conf where higher=ID)
     """
@@ -307,10 +244,7 @@ def compute_metrics_from_scores_and_labels(id_scores, ood_scores,
         'AUPR_OUT': round(aupr_out * 100, 2),
     }
 
-
-# ══════════════════════════════════════════════════════════════════════════════
 # GATEKEEPER COMBINATION
-# ══════════════════════════════════════════════════════════════════════════════
 
 def combine_benford_and_semantic(
         id_benford,   ood_benford,
@@ -318,31 +252,7 @@ def combine_benford_and_semantic(
         benford_fpr_budget=0.05,
         semantic_tpr=0.95,
         semantic_higher_is_id=True):
-    """
-    Two-stage early-exit gatekeeper:
-
-      Stage 1 — Benford/DCT statistical filter (CPU, no forward pass):
-        Reject immediately if χ² > τ_benford.
-        τ_benford calibrated so at most `benford_fpr_budget` of ID images
-        are falsely rejected by this stage alone.
-        → Rejected samples never proceed to Stage 2.
-
-      Stage 2 — Semantic filter (GPU forward pass, only if Stage 1 passes):
-        Reject if semantic_conf < τ_semantic.
-        τ_semantic calibrated at 95% TPR on ID.
-
-      Accept only if both stages pass.
-
-    The early-exit design means Benford-rejected samples skip the GPU
-    forward pass entirely, reducing computational cost for anomalous inputs.
-
-    Returns:
-      reject_id  [N_id]  bool array — True = rejected by gatekeeper
-      reject_ood [N_ood] bool array — True = rejected by gatekeeper
-      tau_benford  float — calibrated Benford threshold
-      tau_semantic float — calibrated semantic threshold
-      stats        dict  — breakdown of rejection counts per stage
-    """
+   
     # ── Calibrate thresholds on ID set ───────────────────────────────────────
     tau_benford  = np.percentile(id_benford,
                                  (1 - benford_fpr_budget) * 100)
@@ -392,12 +302,9 @@ def combine_benford_and_semantic(
     return reject_id, reject_ood, tau_benford, tau_semantic, stats
 
 
-# ══════════════════════════════════════════════════════════════════════════════
 # SAVE RESULTS
-# ══════════════════════════════════════════════════════════════════════════════
 
 def save_results(results_list, output_dir, method_name):
-    """Save ood.csv in OpenOOD format."""
     out = Path(output_dir) / method_name
     out.mkdir(parents=True, exist_ok=True)
     df = pd.DataFrame(results_list)
@@ -416,16 +323,13 @@ def print_results_table(df, title):
               f'{row["AUPR_IN"]:>8.2f}% {row["AUPR_OUT"]:>9.2f}%')
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# MAIN
-# ══════════════════════════════════════════════════════════════════════════════
 
 def main():
     print('=' * 65)
     print('  Hybrid Statistical-Semantic Gatekeeper')
     print('=' * 65)
 
-    # ── Load image lists ──────────────────────────────────────────────────────
+    # Load image lists
     print('\n[1/4] Loading image lists...')
     dataset_index = {}
     for name, cfg in DATASETS.items():
@@ -433,7 +337,7 @@ def main():
         dataset_index[name] = {**cfg, 'images': images, 'labels': labels}
         print(f'  {name:20s}: {len(images):5d} images')
 
-    # ── Compute Benford χ² scores ─────────────────────────────────────────────
+    #  Compute Benford χ²  
     print('\n[2/4] Computing Benford/DCT χ² scores...')
     benford_scores = {}
     for name, cfg in dataset_index.items():
@@ -442,7 +346,7 @@ def main():
         print(f'  {name:20s}: mean χ²={benford_scores[name].mean():.2f}  '
               f'std={benford_scores[name].std():.2f}')
 
-    # Save per-sample χ² scores
+    # Save per-sample χ² 
     chi2_records = []
     for name, cfg in dataset_index.items():
         for img, score in zip(cfg['images'], benford_scores[name]):
@@ -456,7 +360,7 @@ def main():
     chi2_df.to_csv(OUTPUT_DIR / 'chi2_scores.csv', index=False)
     print(f'\n  ✓ χ² scores saved to {OUTPUT_DIR}/chi2_scores.csv')
 
-    # ── Load existing semantic scores ─────────────────────────────────────────
+    # Load existing semantic scores 
     print('\n[3/4] Loading semantic scores from .npz files...')
 
     # MSP and Energy come from OpenOOD results
@@ -484,7 +388,7 @@ def main():
             print(f'  ✗ Maha  {name}: {e}')
             semantic_scores['mahalanobis'][name] = None
 
-    # ── Evaluate all methods and combinations ─────────────────────────────────
+    # Evaluate all methods and combinations 
     print('\n[4/4] Evaluating all methods...')
 
     id_benford = benford_scores['bdd100k_val']
@@ -504,7 +408,7 @@ def main():
             rows.append({'dataset': group_name, **m, 'ACC': 82.16})
         return rows
 
-    # ── Benford only ──────────────────────────────────────────────────────────
+    # Benford only 
     benford_ood_dict = {n: benford_scores[n]
                         for n in dataset_index if n != 'bdd100k_val'}
     rows = evaluate_method(id_benford, benford_ood_dict,
@@ -513,7 +417,7 @@ def main():
     all_results['Benford only'] = df_benford
     print_results_table(df_benford, 'Benford Only')
 
-    # ── Semantic baselines + Hybrid combinations ──────────────────────────────
+    #  Semantic baselines + Hybrid combinations 
     for sem_name in ['msp', 'mahalanobis']:
         sem_scores = semantic_scores[sem_name]
         if sem_scores.get('bdd100k_val') is None:
@@ -533,7 +437,7 @@ def main():
         all_results[f'Baseline {sem_name.upper()}'] = df_base
         print_results_table(df_base, f'Baseline {sem_name.upper()}')
 
-        # Hybrid: early-exit Benford gate + semantic
+        # Hybrid
         hybrid_rows = []
         for group_name, dataset_names in OOD_GROUPS.items():
             valid_names = [n for n in dataset_names
@@ -553,10 +457,10 @@ def main():
                     semantic_higher_is_id=True,
                 )
 
-            # FPR@95: fraction of OOD not rejected = false passes
+            # FPR@95
             fpr = (~reject_ood).mean()
 
-            # AUROC/AUPR: assign worst score to rejected samples
+            # AUROC/AUPR
             id_combined  = id_sem.copy().astype(np.float64)
             id_combined[reject_id]  = id_sem.min() - 1e6
 
@@ -601,7 +505,6 @@ def main():
         print_results_table(df_hybrid,
                             f'Hybrid Benford + {sem_name.upper()}')
 
-    # ── Summary table: all methods side by side ───────────────────────────────
     print('\n' + '=' * 65)
     print('  SUMMARY — FPR@95 comparison')
     print('=' * 65)
@@ -618,7 +521,7 @@ def main():
     print(summary_df.to_string(index=False))
     summary_df.to_csv(OUTPUT_DIR / 'gatekeeper_summary.csv', index=False)
 
-    # Also save AUROC summary
+    # AUROC summary
     auroc_rows = []
     for method_name, df in all_results.items():
         row = {'Method': method_name}
