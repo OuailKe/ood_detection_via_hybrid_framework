@@ -8,8 +8,8 @@ __pycache__/
 # Conda environments
 *.egg-info/
 # Logs
-*.log
-logs/
+#*.log
+#logs/
 # Large model files
 *.pth
 *.ckpt

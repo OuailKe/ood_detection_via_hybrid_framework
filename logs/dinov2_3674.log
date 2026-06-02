@@ -1,0 +1,137 @@
+========================================
+  Job ID   : 3674
+  Node     : localhost
+  Start    : Thu 21 May 2026 13:59:44 IST
+========================================
+  Python   : /home/ouail.kerrak/.conda/envs/ood310/bin/python
+  Conda env: ood310
+
+========================================
+  STEP 1/2 — Training DINOv2 ViT-B/14
+  Start: Thu 21 May 2026 13:59:44 IST
+========================================
+=================================================================
+  DINOv2 ViT-B/14 Fine-tuning on BDD100K 13-class
+=================================================================
+  Device : cuda
+  Epochs : 30
+  LR     : 0.001
+  Batch  : 64
+  Output : /home/ouail.kerrak/ood_project/results/bdd100k_dinov2_vitb14_ft
+
+  Train: 69853 samples
+  Val  : 10000 samples
+  Loading dinov2_vitb14 from torch.hub...
+  Total params    : 86,590,477
+  Trainable params: 86,590,477
+
+  Starting training...
+
+  Epoch 01/30  loss=0.7464  train_acc=79.23%  val_acc=79.67%  best=79.67% ← best
+  Epoch 02/30  loss=0.7162  train_acc=79.35%  val_acc=79.67%  best=79.67%
+  Epoch 03/30  loss=0.7064  train_acc=79.36%  val_acc=79.68%  best=79.68% ← best
+  Epoch 04/30  loss=0.7018  train_acc=79.35%  val_acc=79.67%  best=79.68%
+  Epoch 05/30  loss=0.6995  train_acc=79.35%  val_acc=79.68%  best=79.68%
+  Epoch 06/30  loss=0.6953  train_acc=79.34%  val_acc=79.67%  best=79.68%
+  Epoch 07/30  loss=0.6924  train_acc=79.34%  val_acc=79.67%  best=79.68%
+  Epoch 08/30  loss=0.6895  train_acc=79.36%  val_acc=79.67%  best=79.68%
+  Epoch 09/30  loss=0.6865  train_acc=79.33%  val_acc=79.67%  best=79.68%
+  Epoch 10/30  loss=0.6837  train_acc=79.35%  val_acc=79.67%  best=79.68%
+  Epoch 11/30  loss=0.6798  train_acc=79.33%  val_acc=79.68%  best=79.68%
+  Epoch 12/30  loss=0.6774  train_acc=79.34%  val_acc=79.68%  best=79.68%
+  Epoch 13/30  loss=0.6735  train_acc=79.37%  val_acc=79.60%  best=79.68%
+  Epoch 14/30  loss=0.6696  train_acc=79.36%  val_acc=79.69%  best=79.69% ← best
+  Epoch 15/30  loss=0.6660  train_acc=79.41%  val_acc=79.68%  best=79.69%
+  Epoch 16/30  loss=0.6631  train_acc=79.37%  val_acc=79.68%  best=79.69%
+  Epoch 17/30  loss=0.6589  train_acc=79.41%  val_acc=79.58%  best=79.69%
+  Epoch 18/30  loss=0.6538  train_acc=79.43%  val_acc=79.67%  best=79.69%
+  Epoch 19/30  loss=0.6487  train_acc=79.40%  val_acc=79.59%  best=79.69%
+  Epoch 20/30  loss=0.6431  train_acc=79.43%  val_acc=79.55%  best=79.69%
+  Epoch 21/30  loss=0.6369  train_acc=79.48%  val_acc=79.66%  best=79.69%
+  Epoch 22/30  loss=0.6327  train_acc=79.50%  val_acc=79.64%  best=79.69%
+  Epoch 23/30  loss=0.6272  train_acc=79.56%  val_acc=79.56%  best=79.69%
+  Epoch 24/30  loss=0.6204  train_acc=79.64%  val_acc=79.65%  best=79.69%
+  Epoch 25/30  loss=0.6141  train_acc=79.76%  val_acc=79.50%  best=79.69%
+  Epoch 26/30  loss=0.6081  train_acc=79.83%  val_acc=79.55%  best=79.69%
+  Epoch 27/30  loss=0.6052  train_acc=79.85%  val_acc=79.48%  best=79.69%
+  Epoch 28/30  loss=0.6024  train_acc=79.89%  val_acc=79.48%  best=79.69%
+  Epoch 29/30  loss=0.5973  train_acc=79.97%  val_acc=79.45%  best=79.69%
+  Epoch 30/30  loss=0.5961  train_acc=79.95%  val_acc=79.31%  best=79.69%
+
+  ✓ Training complete. Best val accuracy: 79.69%
+  ✓ Checkpoint saved to /home/ouail.kerrak/ood_project/results/bdd100k_dinov2_vitb14_ft/best.ckpt
+
+  Training complete: Fri 22 May 2026 02:04:23 IST
+
+========================================
+  STEP 2/2 — Mahalanobis Evaluation
+  Start: Fri 22 May 2026 02:04:23 IST
+========================================
+============================================================
+  Mahalanobis OOD Evaluation — DINOv2 ViT-B/14
+============================================================
+
+[1/5] Loading DINOv2 model...
+  ✓ Loaded from /home/ouail.kerrak/ood_project/results/bdd100k_dinov2_vitb14_ft/best.ckpt
+
+[2/5] Loading image lists...
+  bdd100k_val         : 10000 images
+  lostandfound        :  1203 images
+  streethazards       :  1500 images
+  smiyc               :   342 images
+
+[3/5] Computing ID accuracy...
+  ✓ ID accuracy: 79.69%
+
+[4/5] Fitting Mahalanobis on BDD100K val (ID)...
+  ✓ Features shape : (10000, 768)
+  ✓ Precision matrix: (768, 768)
+
+[5/5] Scoring all datasets...
+
+  bdd100k_val
+    mean=765.14  min=0.00  max=4374.48
+
+  lostandfound
+    mean=888.39  min=492.78  max=1990.56
+
+  streethazards
+    mean=1160.23  min=546.65  max=3528.62
+
+  smiyc
+    mean=1112.72  min=351.03  max=2342.97
+
+  Sanity check (OOD mean distance should be > ID):
+    bdd100k_val         : 765.14  ← ID (reference)
+    lostandfound        : 888.39  
+    streethazards       : 1160.23  
+    smiyc               : 1112.72  
+
+  Saving .npz score files...
+    ✓ bdd100k_val.npz  (10000 samples)
+    ✓ lostandfound.npz  (1203 samples)
+    ✓ streethazards.npz  (1500 samples)
+    ✓ smiyc.npz  (342 samples)
+
+============================================================
+  dataset                FPR@95    AUROC   AUPR_IN   AUPR_OUT    ACC
+  ----------------------------------------------------------------
+  lostandfound           94.85%   68.38%    95.10%     16.08%  79.69%
+  streethazards          64.07%   86.43%    97.66%     44.27%  79.69%
+  smiyc                  65.50%   81.04%    99.08%     14.44%  79.69%
+  nearood                94.85%   68.38%    95.10%     16.08%  79.69%
+  farood                 64.33%   85.43%    96.81%     48.33%  79.69%
+============================================================
+
+  ✓ Output saved to /home/ouail.kerrak/ood_project/results/mahalanobis_dinov2
+  ├── scores/
+  │   ├── bdd100k_val.npz
+  │   ├── lostandfound.npz
+  │   ├── streethazards.npz
+  │   ├── smiyc.npz
+  ├── ood.csv
+  └── log.txt
+
+========================================
+  ALL DONE: Fri 22 May 2026 02:21:28 IST
+========================================

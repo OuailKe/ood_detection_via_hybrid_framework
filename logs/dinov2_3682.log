@@ -1,0 +1,116 @@
+========================================
+  Job ID   : 3682
+  Node     : localhost
+  Start    : Sun 24 May 2026 19:02:50 IST
+========================================
+  Python   : /home/ouail.kerrak/.conda/envs/ood310/bin/python
+  Conda env: ood310
+
+========================================
+  STEP 1/2 — Training DINOv2 ViT-B/14
+  Start: Sun 24 May 2026 19:02:50 IST
+========================================
+=================================================================
+  DINOv2 ViT-B/14 Fine-tuning on BDD100K 13-class
+=================================================================
+  Device : cuda
+  Epochs : 30
+  LR     : 0.001
+  Batch  : 64
+  Output : /home/ouail.kerrak/ood_project/results/bdd100k_dinov2_vitb14_ft
+
+  Train: 69853 samples
+  Val  : 10000 samples
+  Loading dinov2_vitb14 from torch.hub...
+  Total params    : 86,590,477
+  Trainable params: 86,590,477
+
+  Starting training...
+
+  Epoch 01/30  loss=0.4827  train_acc=82.53%  val_acc=82.29%  best=82.29% ← best
+  Epoch 02/30  loss=0.4003  train_acc=84.97%  val_acc=83.50%  best=83.50% ← best
+  Epoch 03/30  loss=0.3535  train_acc=86.81%  val_acc=83.21%  best=83.50%
+  Epoch 04/30  loss=0.3001  train_acc=88.74%  val_acc=83.34%  best=83.50%
+  Epoch 05/30  loss=0.2501  train_acc=90.74%  val_acc=83.03%  best=83.50%
+  Epoch 06/30  loss=0.2028  train_acc=92.71%  val_acc=83.20%  best=83.50%
+  Epoch 07/30  loss=0.1615  train_acc=94.29%  val_acc=82.64%  best=83.50%
+
+  Early stopping at epoch 7 (no improvement for 5 epochs)
+
+  ✓ Training complete. Best val accuracy: 83.50%
+  ✓ Checkpoint saved to /home/ouail.kerrak/ood_project/results/bdd100k_dinov2_vitb14_ft/best.ckpt
+
+  Training complete: Sun 24 May 2026 23:14:28 IST
+
+========================================
+  STEP 2/2 — Mahalanobis Evaluation
+  Start: Sun 24 May 2026 23:14:28 IST
+========================================
+============================================================
+  Mahalanobis OOD Evaluation — DINOv2 ViT-B/14
+============================================================
+
+[1/5] Loading DINOv2 model...
+  ✓ Loaded from /home/ouail.kerrak/ood_project/results/bdd100k_dinov2_vitb14_ft/best.ckpt
+
+[2/5] Loading image lists...
+  bdd100k_val         : 10000 images
+  lostandfound        :  1203 images
+  streethazards       :  1500 images
+  smiyc               :   342 images
+
+[3/5] Computing ID accuracy...
+  ✓ ID accuracy: 83.50%
+
+[4/5] Fitting Mahalanobis on BDD100K val (ID)...
+  ✓ Features shape : (10000, 768)
+  ✓ Precision matrix: (768, 768)
+
+[5/5] Scoring all datasets...
+
+  bdd100k_val
+    mean=764.12  min=0.00  max=4144.74
+
+  lostandfound
+    mean=1788.10  min=884.48  max=4925.62
+
+  streethazards
+    mean=2454.60  min=855.84  max=50441.05
+
+  smiyc
+    mean=5707.16  min=1551.93  max=20408.84
+
+  Sanity check (OOD mean distance should be > ID):
+    bdd100k_val         : 764.12  ← ID (reference)
+    lostandfound        : 1788.10  
+    streethazards       : 2454.60  
+    smiyc               : 5707.16  
+
+  Saving .npz score files...
+    ✓ bdd100k_val.npz  (10000 samples)
+    ✓ lostandfound.npz  (1203 samples)
+    ✓ streethazards.npz  (1500 samples)
+    ✓ smiyc.npz  (342 samples)
+
+============================================================
+  dataset                FPR@95    AUROC   AUPR_IN   AUPR_OUT    ACC
+  ----------------------------------------------------------------
+  lostandfound           27.10%   96.28%    99.57%     64.78%  83.50%
+  streethazards          11.27%   97.89%    99.69%     85.21%  83.50%
+  smiyc                   0.00%   99.88%   100.00%     96.72%  83.50%
+  nearood                27.10%   96.28%    99.57%     64.78%  83.50%
+  farood                  9.17%   98.26%    99.69%     90.40%  83.50%
+============================================================
+
+  ✓ Output saved to /home/ouail.kerrak/ood_project/results/mahalanobis_dinov2
+  ├── scores/
+  │   ├── bdd100k_val.npz
+  │   ├── lostandfound.npz
+  │   ├── streethazards.npz
+  │   ├── smiyc.npz
+  ├── ood.csv
+  └── log.txt
+
+========================================
+  ALL DONE: Sun 24 May 2026 23:32:52 IST
+========================================
