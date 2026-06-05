@@ -1,0 +1,6 @@
+dataset,FPR@95,AUROC,AUPR_IN,AUPR_OUT,ACC
+lostandfound,27.1,96.28,99.57,64.78,83.5
+streethazards,11.27,97.89,99.69,85.21,83.5
+smiyc,0.0,99.88,100.0,96.72,83.5
+nearood,27.1,96.28,99.57,64.78,83.5
+farood,9.17,98.26,99.69,90.4,83.5

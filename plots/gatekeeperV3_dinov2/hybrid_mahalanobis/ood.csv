@@ -1,0 +1,6 @@
+dataset,FPR@95,AUROC,AUPR_IN,AUPR_OUT,ACC,tau_benford,tau_semantic,OOD_stage1_rejected,OOD_stage2_rejected,OOD_total_rejected,OOD_false_passes
+lostandfound,26.93,93.07,98.85,46.91,83.5,73.3,-1431.9848,4,875,879,324
+streethazards,8.73,94.41,98.68,57.87,83.5,73.3,-1431.9848,474,895,1369,131
+smiyc,0.0,95.11,99.68,25.89,83.5,73.3,-1431.9848,132,210,342,0
+nearood,26.93,93.07,98.85,46.91,83.5,73.3,-1431.9848,4,875,879,324
+farood,7.11,94.54,98.43,63.25,83.5,73.3,-1431.9848,606,1105,1711,131
